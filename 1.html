@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Brush Canvas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            max-width: 90vw;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="imageUpload" accept="image/*" multiple>
+    <input type="range" id="brushSize" min="5" max="100" value="20">
+    <canvas id="paintCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageUpload = document.getElementById('imageUpload');
+        const brushSizeInput = document.getElementById('brushSize');
+
+        let brushPattern = null;
+
+        imageUpload.addEventListener('change', (e) => {
+            const imageFiles = e.target.files;
+            if (imageFiles.length > 10) {
+                alert('Only 10 images allowed.');
+                return;
+            }
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 100; // Or any size you want for the brush pattern
+            tempCanvas.height = 100;
+
+            const tempCtx = tempCanvas.getContext('2d');
+            let loadedImages = 0;
+
+            [...imageFiles].forEach((file, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    tempCtx.drawImage(img, (index % 5) * 20, Math.floor(index / 5) * 20, 20, 20);
+                    loadedImages++;
+
+                    if (loadedImages === imageFiles.length) {
+                        brushPattern = ctx.createPattern(tempCanvas, 'repeat');
+                    }
+                };
+                img.src = URL.createObjectURL(file);
+            });
+        });
+
+        function startDraw(e) {
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX || e.touches[0].clientX, e.offsetY || e.touches[0].clientY);
+        }
+
+        function doDraw(e) {
+            ctx.strokeStyle = brushPattern;
+            ctx.lineWidth = brushSizeInput.value;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineTo(e.offsetX || e.touches[0].clientX, e.offsetY || e.touches[0].clientY);
+            ctx.stroke();
+        }
+
+        function stopDraw() {
+            canvas.onmousemove = null;
+            canvas.onmouseup = null;
+            canvas.ontouchmove = null;
+            canvas.ontouchend = null;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('touchstart', startDraw);
+
+        canvas.addEventListener('mousemove', doDraw);
+        canvas.addEventListener('touchmove', doDraw);
+
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('touchend', stopDraw);
+    </script>
+</body>
+</html>
