@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rey's Idea</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            max-width: 90vw;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="imageUpload" accept="image/*" multiple>
+    <input type="range" id="brushSize" min="5" max="100" value="20">
+    <canvas id="paintCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageUpload = document.getElementById('imageUpload');
+        const brushSizeInput = document.getElementById('brushSize');
+
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = 100; // 5 images * 20 pixels each
+        hiddenCanvas.height = 40; // 2 rows * 20 pixels each
+        const hiddenCtx = hiddenCanvas.getContext('2d');
+
+        imageUpload.addEventListener('change', (e) => {
+            const imageFiles = e.target.files;
+            if (imageFiles.length > 10) {
+                alert('Only 10 images allowed.');
+                return;
+            }
+
+            let loadedImages = 0;
+            [...imageFiles].forEach((file, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    hiddenCtx.drawImage(img, (index % 5) * 20, Math.floor(index / 5) * 20, 20, 20);
+                    loadedImages++;
+                };
+                img.src = URL.createObjectURL(file);
+            });
+        });
+
+        function startDraw(e) {
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX || e.touches[0].clientX, e.offsetY || e.touches[0].clientY);
+        }
+
+        function doDraw(e) {
+            const brushRadius = brushSizeInput.value / 2;
+            const x = e.offsetX || e.touches[0].clientX;
+            const y = e.offsetY || e.touches[0].clientY;
+
+            // Draw the composite image from hidden canvas
+            ctx.drawImage(hiddenCanvas, x - brushRadius, y - brushRadius, brushSizeInput.value, brushSizeInput.value * 0.4); 
+
+            // Create a mask for soft round edges
+            const grd = ctx.createRadialGradient(x, y, 0, x, y, brushRadius);
+            grd.addColorStop(0, 'rgba(0,0,0,1)');
+            grd.addColorStop(0.95, 'rgba(0,0,0,1)');
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = grd;
+            ctx.fillRect(x - brushRadius, y - brushRadius, brushSizeInput.value, brushSizeInput.value * 0.4);
+
+            // Reset the composite operation
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function stopDraw() {
+            canvas.onmousemove = null;
+            canvas.onmouseup = null;
+            canvas.ontouchmove = null;
+            canvas.ontouchend = null;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('touchstart', startDraw);
+
+        canvas.addEventListener('mousemove', doDraw);
+        canvas.addEventListener('touchmove', doDraw);
+
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('touchend', stopDraw);
+    </script>
+</body>
+</html>
