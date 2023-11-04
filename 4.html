@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rey's Idea</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            max-width: 90vw;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="imageUpload" accept="image/*" multiple>
+    <input type="range" id="brushSize" min="5" max="100" value="20">
+    <canvas id="paintCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageUpload = document.getElementById('imageUpload');
+        const brushSizeInput = document.getElementById('brushSize');
+
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = 100;  // Width of composite image
+        hiddenCanvas.height = 40; // Height of composite image
+        const hiddenCtx = hiddenCanvas.getContext('2d');
+
+        imageUpload.addEventListener('change', (e) => {
+            const imageFiles = e.target.files;
+            if (imageFiles.length > 10) {
+                alert('Only 10 images allowed.');
+                return;
+            }
+
+            let loadedImages = 0;
+            [...imageFiles].forEach((file, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    hiddenCtx.drawImage(img, (index % 10) * 10, 0, 10, 40);
+                    loadedImages++;
+
+                    if (loadedImages === imageFiles.length) {
+                        // The brush is ready to use when all images are loaded
+                    }
+                };
+                img.src = URL.createObjectURL(file);
+            });
+        });
+
+        function getPointerPosition(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function doDraw(e) {
+            const pointerPosition = e.touches ? getPointerPosition(e.touches[0]) : getPointerPosition(e);
+            const brushRadius = brushSizeInput.value / 2;
+            const x = pointerPosition.x;
+            const y = pointerPosition.y;
+
+            const brushCanvas = document.createElement('canvas');
+            brushCanvas.width = brushSizeInput.value;
+            brushCanvas.height = brushSizeInput.value * 0.4;
+            const brushCtx = brushCanvas.getContext('2d');
+
+            const grd = brushCtx.createRadialGradient(brushRadius, brushRadius * 0.4, 0, brushRadius, brushRadius * 0.4, brushRadius);
+            grd.addColorStop(0, 'rgba(0,0,0,1)');
+            grd.addColorStop(0.95, 'rgba(0,0,0,1)');
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+
+            brushCtx.fillStyle = grd;
+            brushCtx.fillRect(0, 0, brushCanvas.width, brushCanvas.height);
+
+            brushCtx.globalCompositeOperation = 'source-in';
+
+            brushCtx.drawImage(hiddenCanvas, 0, 0, brushCanvas.width, brushCanvas.height);
+
+            ctx.drawImage(brushCanvas, x - brushRadius, y - brushRadius, brushCanvas.width, brushCanvas.height);
+        }
+
+        function startDraw(e) {
+            e.preventDefault();  // Prevent default to handle touch events properly
+            canvas.addEventListener('mousemove', doDraw);
+            canvas.addEventListener('touchmove', doDraw);
+        }
+
+        function stopDraw() {
+            canvas.removeEventListener('mousemove', doDraw);
+            canvas.removeEventListener('touchmove', doDraw);
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('touchstart', startDraw);
+
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('touchend', stopDraw);
+    </script>
+</body>
+</html>
